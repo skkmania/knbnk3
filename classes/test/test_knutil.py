@@ -24,10 +24,6 @@ class TestFileName:
         expect = DATA_DIR + '/1091460/k001/001_cont.jpeg'
         assert name == expect
 
-class TestWriteDataFile:
-    def test_write_data_file(self, knp):
-        knp.write_data_file(DATA_DIR)
-
 
 class TestTmpDir:
     def test_write(self, tmpdir):
