@@ -5,7 +5,7 @@ import os
 import os.path
 import json
 import pprint
-import knutil as ku
+import classes.knutil as ku
 #import knbook as kb
 from datetime import datetime
 #import knkoma as kk

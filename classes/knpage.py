@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 import json
 import os.path
+from operator import itemgetter
 from functools import reduce
 import classes.knutil as ku
 #from operator import itemgetter, attrgetter
@@ -81,6 +82,28 @@ class KnPage:
             print(msg)
             raise KnPageParamsException(msg)
         self.outfilename = self.parameters['outfilename']
+
+    def read_parameter(self, param):
+        self.p = param
+        self.parameters = param['page']
+        if "mavstd" in self.parameters:
+            self.mavstd = self.parameters['mavstd']
+        else:
+            self.mavstd = 10
+        if "pgmgn" in self.parameters:
+            self.pgmgn_x, self.pgmgn_y = self.parameters['pgmgn']
+        else:
+            self.pgmgn_x, self.pgmgn_y = [0.05, 0.05]
+        # collectされたのに小さすぎるのはなにかの間違いとして排除
+        #  mcbs : minimum collected box size
+        if 'mcbs' in self.p['page']:
+            self.mcbs = self.p['page']['mcbs']
+        else:
+            self.mcbs = 10
+        self.pagedir = "/".join([self.p['param']['workdir'],
+                                 self.p['book']['bookdir'],
+                                 self.p['koma']['komadir'],
+                                 self.p['page']['pagedir']])
 
     def get_img(self):
         if os.path.exists(self.imgfullpath):
@@ -174,18 +197,6 @@ class KnPage:
             cv2.findContours(self.binarized,
                              cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
-    def writeContour(self):
-        self.img_of_contours = np.zeros(self.img.shape, np.uint8)
-        for point in self.contours:
-            x, y = point[0][0]
-            cv2.circle(self.img_of_contours, (x, y), 1, [0, 0, 255])
-
-    def write_gradients(self, outdir):
-        for n in ['sobel', 'scharr', 'laplacian']:
-            if n in self.parameters:
-                outfilename = ku.mkFilename(self, '_' + n, outdir)
-                img = getattr(self, 'gradients_' + n)
-                cv2.imwrite(outfilename, img)
 
     def get_small_img_with_lines(self):
         self.small_img_with_lines = self.small_img.copy()
@@ -218,25 +229,27 @@ class KnPage:
         outfilename = ku.mkFilename(self, '_small_img_with_linesP', outdir)
         cv2.imwrite(outfilename, self.small_img_with_linesP)
 
-    def write_contours_bounding_rect_to_file(self, outdir=None):
-        if not hasattr(self, 'contours'):
-            self.getContours()
-        om = np.zeros(self.img.shape, np.uint8)
-        for cnt in self.contours:
-            x, y, w, h = cv2.boundingRect(cnt)
-            cv2.rectangle(om, (x, y), (x + w, y + h), [0, 255, 0])
-            if (int(w) in range(60, 120)) or (int(h) in range(60, 120)):
-                self.centroids.append((x + w / 2, y + h / 2))
-                cv2.circle(om, (int(x + w / 2),
-                                int(y + h / 2)), 5, [0, 255, 0])
-        self.write(ku.mkFilename(self, '_cont_rect', outdir), om)
-
-    def write_boxes_to_file(self, outdir):
-        om = np.zeros(self.img.shape, np.uint8)
-        for box in self.boxes:
-            x, y, w, h = box
-            cv2.rectangle(om, (x, y), (x + w, y + h), [0, 255, 0])
-        self.write(ku.mkFilename(self, '_boxes', outdir), om)
+    @ku.deblog
+    def write_boxes_to_file(self, outdir=None, target=None, fix=None):
+        if outdir is None:
+            outdir = self.pagedir
+        if target is None:
+            s, e = None, None
+        else:
+            s, e = target
+        boxes = self.boxes[s:e]
+        x_sorted_boxes = self.x_sorted_boxes[s:e]
+        y_sorted_boxes = self.y_sorted_boxes[s:e]
+        for t in [(boxes, '_boxes%s' % fix),
+                  (x_sorted_boxes, '_x_sorted_boxes%s' % fix),
+                  (y_sorted_boxes, '_y_sorted_boxes%s' % fix)]:
+            om = np.zeros(self.img.shape, np.uint8)
+            for box in t[0]:
+                x, y, w, h = box
+                cv2.rectangle(om, (x, y), (x + w, y + h), [0, 255, 0])
+            outfilename = ku.mkFilename(self, t[1], outdir)
+            self.logger.debug('writing img to %s' % outfilename)
+            cv2.imwrite(outfilename, om)
 
     def write_data_file(self, outdir):
         if not hasattr(self, 'contours'):
@@ -252,48 +265,6 @@ class KnPage:
             for hic in self.hierarchy:
                 f.writelines(str(hic))
                 f.write("\n")
-
-    def write_binarized_file(self, outdir):
-        if not hasattr(self, 'contours'):
-            self.getContours()
-        outfilename = ku.mkFilename(self, '_binarized', outdir)
-        self.write(outfilename, self.binarized)
-
-    def write_original_with_contour_file(self, outdir):
-        if not hasattr(self, 'contours'):
-            self.getContours()
-        self.orig_w_cont = self.img.copy()
-        for point in self.contours:
-            x, y = point[0][0]
-            cv2.circle(self.orig_w_cont, (x, y), 1, [0, 0, 255])
-        outfilename = ku.mkFilename(self, '_orig_w_cont', outdir)
-        self.write(outfilename, self.orig_w_cont)
-
-    def write_original_with_contour_and_rect_file(self, outdir):
-        if not hasattr(self, 'contours'):
-            self.getContours()
-        self.orig_w_cont_and_rect = self.img.copy()
-        om = self.orig_w_cont_and_rect
-        for cnt in self.contours:
-            x, y, w, h = cv2.boundingRect(cnt)
-            cv2.rectangle(om, (x, y), (x + w, y + h), [0, 255, 0])
-            if (int(w) in range(60, 120)) or (int(h) in range(60, 120)):
-                self.centroids.append((x + w / 2, y + h / 2))
-                cv2.circle(om, (int(x + w / 2),
-                                int(y + h / 2)), 5, [0, 255, 0])
-            cx, cy = cnt[0][0]
-            cv2.circle(om, (cx, cy), 2, [0, 0, 255])
-        outfilename = ku.mkFilename(self, '_orig_w_cont_and_rect', outdir)
-        self.write(outfilename, self.orig_w_cont_and_rect)
-
-    def write_all(self, outdir):
-        self.write_data_file(outdir)
-        self.write_binarized_file(outdir)
-        self.write_contours_bounding_rect_to_file(outdir)
-        self.write_original_with_contour_file(outdir)
-        self.write_original_with_contour_and_rect_file(outdir)
-        self.write_collected_boxes_to_file(outdir)
-        self.write_original_with_collected_boxes_to_file(outdir)
 
     def include(self, box1, box2):
         """
@@ -479,28 +450,194 @@ class KnPage:
 
         #f.close()    # for debug
 
-    def write_collected_boxes_to_file(self, outdir=None):
-        if not hasattr(self, 'collected_boxes'):
-            self.collect_boxes()
+    def dispose_boxes(self, debug=False):
+        """
+        self.boxesから消せるものは消していく
+        """
+        # w, h どちらかが200以上のboxは排除
+        # これはgraphの存在するページでは問題か？
+        if "toobig" in self.parameters["page"]:
+            toobig_w, toobig_h = self.parameters['page']['toobig']
+        else:
+            toobig_w, toobig_h = [200, 200]
+        self.boxes = [x for x in self.boxes
+                      if (x[2] < toobig_w) and (x[3] < toobig_h)]
 
-        om = np.zeros(self.img.shape, np.uint8)
-        for box in self.collected_boxes:
+        self.sweep_boxes_in_page_margin()
+
+        # 他のboxに包含されるboxは排除
+        self.sweep_included_boxes()
+
+        # 小さく、隣接するもののないboxは排除
+        self.sweep_maverick_boxes()
+
+    @ku.deblog
+    def estimate_char_size(self):
+        self.logger.debug("# of collected_boxes: %d"
+                          % len(self.collected_boxes))
+        self.logger.debug("# of centroids: %d" % len(self.centroids))
+        self.square_like_boxes = [x for x in self.collected_boxes if
+                                  (x[2] * 0.8) < x[3] < (x[2] * 1.2)]
+        self.logger.debug("# of square_like_boxes: %d"
+                          % len(self.square_like_boxes))
+        self.estimated_width = max(map(lambda x: x[2], self.square_like_boxes))
+        self.estimated_height = max(map(lambda x: x[3],
+                                        self.square_like_boxes))
+        self.logger.debug('estimated_width: %d' % self.estimated_width)
+        self.logger.debug('estimated_height: %d' % self.estimated_height)
+
+    @ku.deblog
+    def estimate_vertical_lines(self):
+        """
+        collected_boxesの重心をソートして、
+        ｘ座標がジャンプしているところ
+        (経験上、同じ行ならば20 pixel以上離れない）
+        (ここは試行錯誤が必要か？ルビや句点を同じ行とするための工夫？）
+        が行の切れ目だと判定し、
+        collected_boxesをグループ分けする
+        """
+        self.centroids = map(lambda x: (x[0] + x[2] / 2, x[1] + x[3] / 2),
+                             self.collected_boxes)
+        self.square_centroids = map(lambda x:
+                                    (x[0] + x[2] / 2, x[1] + x[3] / 2),
+                                    self.square_like_boxes)
+        self.logger.debug("# of square_centroids: %d"
+                          % len(self.square_centroids))
+        self.logger.debug("square_centroids: %s" % str(self.square_centroids))
+        self.square_centroids.sort(key=itemgetter(0, 1))
+        self.box_by_v_lines = {}
+        self.box_by_v_lines[0] = [self.square_centroids[0]]
+        line_idx = 0
+        for c in self.square_centroids[1:]:
+            if c[0] - self.box_by_v_lines[line_idx][-1][0] <= 20:
+
+                self.box_by_v_lines[line_idx].append(c)
+            else:
+                line_idx += 1
+                self.box_by_v_lines[line_idx] = [c]
+
+        self.logger.debug('box_by_v_lines: %s' % str(self.box_by_v_lines))
+
+    @ku.deblog
+    def rotate_image(self):
+        image_center = tuple(np.array(self.img.shape[0:2]) / 2)
+        dsize = tuple(reversed(np.array(self.img.shape[0:2])))
+        if self.estimated_angle > 0:
+            degree = 180 * (np.pi / 2 -
+                            np.arctan(self.estimated_angle)) / np.pi
+            degree = degree * (-1.0)
+        else:
+            angle = (-1.0) * self.estimated_angle
+            degree = 180 * (np.pi / 2 - np.arctan(angle)) / np.pi
+
+        rot_mat = cv2.getRotationMatrix2D(image_center, degree, 1.0)
+        self.rotated_img = cv2.warpAffine(self.img, rot_mat,
+                                          dsize, flags=cv2.INTER_LINEAR)
+
+    @ku.deblog
+    def estimate_rotate_angle(self):
+        slopes = []
+        for k, v in self.box_by_v_lines.items():
+            if len(v) > 10:
+                xi = map(itemgetter(0), v)
+                yi = map(itemgetter(1), v)
+                results = stats.linregress(xi, yi)
+                slopes.append(results[0])
+
+        self.logger.debug("slopes: %s" % str(slopes))
+        self.estimated_slope = np.mean(slopes)
+        self.logger.debug("avg of slopes: %f" % self.estimated_slope)
+        self.estimated_angle = np.arctan(self.estimated_slope)
+        self.logger.debug("estimated_angle: %f" % self.estimated_angle)
+
+    @ku.deblog
+    def write_rotated_img_to_file(self, outdir=None, fix=None):
+        if outdir is None:
+            outdir = self.pagedir
+        cv2.imwrite(ku.mkFilename(self, '_rotated%s' % fix, outdir),
+                    self.rotated_img)
+
+
+    def sweep_maverick_boxes(self):
+        """
+        他のboxから離れて存在しているboxをself.boxesから排除する
+        """
+        boxes = self.boxes
+        for box in boxes:
+            neighbors = self.get_neighbors(box, 10, 20)
+            self.logger.debug('box: %s' % str(box))
+            self.logger.debug('# of neighbors: %d' % len(neighbors))
+            if len(neighbors) == 0:
+                self.boxes.remove(box)
+
+    def flatten(self, i):
+        return reduce(
+            lambda a, b: a + (self.flatten(b) if hasattr(b, '__iter__')
+                              else [b]),
+            i, [])
+
+    def show_message(f):
+        def wrapper():
+            print("function called")
+            return f()
+        return wrapper
+
+
+    @ku.deblog
+    def getBoxesAndCentroids(self, box_min=16, box_max=48):
+        if not hasattr(self, 'contours'):
+            self.getContours()
+
+        if hasattr(self, 'parameters'):
+            # if self.parameters.has_key('boundingRect'):
+            if 'boundingRect' in self.parameters:
+                box_min, box_max = self.parameters['boundingRect']
+
+        for cnt in self.contours:
+            box = cv2.boundingRect(cnt)
+            self.boxes.append(box)
             x, y, w, h = box
-            cv2.rectangle(om, (x, y), (x + w, y + h), [0, 0, 255])
-        self.write(ku.mkFilename(self, '_collected_box', outdir), om)
+            if (int(w) in range(box_min, box_max)) or \
+                    (int(h) in range(box_min, box_max)):
+                self.centroids.append((x + w / 2, y + h / 2))
 
-    def write_original_with_collected_boxes_to_file(self, outdir=None):
-        if not hasattr(self, 'collected_boxes'):
-            self.collect_boxes()
-            self.boxes = self.collected_boxes
-            self.collect_boxes()
-            self.boxes = self.collected_boxes
-            self.collect_boxes()
 
-        self.orig_w_collected = self.img.copy()
-        om = self.orig_w_collected
-        for box in self.collected_boxes:
-            x, y, w, h = box
-            cv2.rectangle(om, (x, y), (x + w, y + h), [0, 0, 255])
-        self.write(ku.mkFilename(self, '_orig_w_collected_box', outdir), om)
+    def in_margin(self, box, le, ri, up, lo):
+        x1, y1 = box[0:2]
+        x2, y2 = map(sum, zip(box[0:2], box[2:4]))
+        return (y2 < up) or (y1 > lo) or (x2 < le) or (x1 > ri)
 
+
+    def sweep_boxes_in_page_margin(self, mgn=None):
+        """
+        pageの余白に存在すると思われるboxは排除
+        box: [x, y, w, h]
+        """
+
+        if mgn:
+            self.pgmgn_x, self.pgmgn_y = mgn
+        else:
+            self.pgmgn_x, self.pgmgn_y = self.parameters['page']['pgmgn']
+
+
+
+        left_mgn = self.width * self.pgmgn_x
+        right_mgn = self.width * (1 - self.pgmgn_x)
+        upper_mgn = self.height * self.pgmgn_y
+        lower_mgn = self.height * (1 - self.pgmgn_y)
+
+        self.boxes = [x for x in self.boxes
+                      if not self.in_margin(x, left_mgn,
+                                            right_mgn, upper_mgn, lower_mgn)]
+
+    def sort_boxes(self):
+        """
+        x_sorted : xの昇順、yの昇順に並べる
+        y_sorted : yの昇順、xの昇順に並べる
+        """
+        if not hasattr(self, 'boxes'):
+            self.getContours()
+            if len(self.boxes) == 0:
+                self.getBoxesAndCentroids()
+        self.x_sorted_boxes = sorted(self.boxes, key=itemgetter(0, 1))
+        self.y_sorted_boxes = sorted(self.boxes, key=itemgetter(1, 0))

@@ -42,16 +42,7 @@ class TestKnPage():
         assert kn.centroids != None
         assert len(kn.centroids) == 3160
 
-    def test_writeContour(self, kn005):
-        kn = KnPage(params=kn005)
-        kn.getContours()
-        kn.writeContour()
-        assert kn.img_of_contours != None
 
-    def test_write_contours_bounding_rect_to_file(self, kn005):
-        kn = KnPage(params=kn005)
-        kn.write_contours_bounding_rect_to_file(DATA_DIR)
-        assert kn != None
 
     def test_write_data_file(self, kn005):
         kn = KnPage(params=kn005)
