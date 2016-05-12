@@ -67,6 +67,8 @@ class KnPage:
             raise KnPageException('params is None')
         self.parameters = params
         self.imgfullpath = params.get_imgFullPath()
+        if params['page']['imgfname'] and params['page']['pagedir']:
+            self.imgfullpath = "/".join([params['param']['outdir'], params['koma']['komadir'], params['page']['pagedir'], params['page']['imgfname']])
         self.get_img()
 
     def read_params(self, params):
@@ -228,43 +230,6 @@ class KnPage:
     def write_small_img_with_linesP(self, outdir):
         outfilename = ku.mkFilename(self, '_small_img_with_linesP', outdir)
         cv2.imwrite(outfilename, self.small_img_with_linesP)
-
-    @ku.deblog
-    def write_boxes_to_file(self, outdir=None, target=None, fix=None):
-        if outdir is None:
-            outdir = self.pagedir
-        if target is None:
-            s, e = None, None
-        else:
-            s, e = target
-        boxes = self.boxes[s:e]
-        x_sorted_boxes = self.x_sorted_boxes[s:e]
-        y_sorted_boxes = self.y_sorted_boxes[s:e]
-        for t in [(boxes, '_boxes%s' % fix),
-                  (x_sorted_boxes, '_x_sorted_boxes%s' % fix),
-                  (y_sorted_boxes, '_y_sorted_boxes%s' % fix)]:
-            om = np.zeros(self.img.shape, np.uint8)
-            for box in t[0]:
-                x, y, w, h = box
-                cv2.rectangle(om, (x, y), (x + w, y + h), [0, 255, 0])
-            outfilename = ku.mkFilename(self, t[1], outdir)
-            self.logger.debug('writing img to %s' % outfilename)
-            cv2.imwrite(outfilename, om)
-
-    def write_data_file(self, outdir):
-        if not hasattr(self, 'contours'):
-            self.getContours()
-        outfilename = ku.mkFilename(self, 'data', outdir)
-        with open(outfilename, 'w') as f:
-            f.write("contours\n")
-            for cnt in self.contours:
-                f.writelines(str(cnt))
-                f.write("\n")
-
-            f.write("\n\nhierarchy\n")
-            for hic in self.hierarchy:
-                f.writelines(str(hic))
-                f.write("\n")
 
     def include(self, box1, box2):
         """

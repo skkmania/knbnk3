@@ -29,12 +29,14 @@ def write_boxes_coordinates_data_to_textfile(knpage, outdir=None, ext=None):
     :param outdir:
     :return:
     """
-    with open(ku.mkFilename(knpage, '_boxes_coodinates_data', outdir, ext), 'w') as f:
+    outfilename = ku.mkFilename(knpage, '_boxes_coodinates_data', outdir, ext)
+    with open(outfilename, 'w') as f:
         f.write("knpage.boxes\n")
         f.write('len(boxes) : %s \n' % str(len(knpage.boxes)))
         for box in knpage.boxes:
             f.write(str(box) + "\n")
         f.write("\n")
+    return outfilename
 
 
 def write_binarized_to_file(knpage, outdir):
@@ -71,7 +73,9 @@ def write_contours_bounding_rect_to_file(knpage, outdir=None):
             knpage.centroids.append((x + w / 2, y + h / 2))
             cv2.circle(om, (int(x + w / 2),
                             int(y + h / 2)), 5, [0, 255, 0])
-    knpage.write(ku.mkFilename(knpage, '_cont_rect', outdir), om)
+    outfilename = ku.mkFilename(knpage, '_cont_rect', outdir)
+    knpage.write(outfilename, om)
+    return outfilename
 
 def write_original_with_contour_to_file(knpage, outdir=None):
     if not hasattr(knpage, 'contours'):
@@ -82,7 +86,7 @@ def write_original_with_contour_to_file(knpage, outdir=None):
         cv2.circle(knpage.orig_w_cont, (x, y), 2, [0, 0, 255])
     outfilename = ku.mkFilename(knpage, '_orig_w_cont', outdir)
     knpage.write(outfilename, knpage.orig_w_cont)
-
+    return outfilename
 
 def write_original_with_contour_and_rect_to_file(knpage, outdir=None):
     if not hasattr(knpage, 'contours'):
@@ -100,7 +104,43 @@ def write_original_with_contour_and_rect_to_file(knpage, outdir=None):
         cv2.circle(om, (cx, cy), 2, [0, 0, 255])
     outfilename = ku.mkFilename(knpage, '_orig_w_cont_and_rect', outdir)
     knpage.write(outfilename, knpage.orig_w_cont_and_rect)
+    return outfilename
 
+def write_boxes_to_file(knpage, outdir=None, target=None, fix=None):
+    """
+    output 3 image file of boxes. differnece of these files is "order of boxes"
+        1. boxes as generated order
+        2. boxes as sorted by x-axis
+        3. boxes as sorted by y-axis
+    :param knpage:
+    :param outdir:
+    :param target: a tuple of 2 integers.  (start, end) means the range of boxes you want to output
+    :param fix:
+    :return: a list of 3 output file names
+    """
+    if outdir is None:
+        outdir = knpage.pagedir
+    if target is None:
+        s, e = None, None
+    else:
+        s, e = target
+    knpage.getCentroids()
+    knpage.sort_boxes()
+    boxes = knpage.boxes[s:e]
+    x_sorted_boxes = knpage.x_sorted_boxes[s:e]
+    y_sorted_boxes = knpage.y_sorted_boxes[s:e]
+    outfilenames = []
+    for t in [(boxes, '_boxes%s' % fix),
+              (x_sorted_boxes, '_x_sorted_boxes%s' % fix),
+              (y_sorted_boxes, '_y_sorted_boxes%s' % fix)]:
+        om = np.zeros(knpage.img.shape, np.uint8)
+        for box in t[0]:
+            x, y, w, h = box
+            cv2.rectangle(om, (x, y), (x + w, y + h), [0, 255, 0])
+        outfilename = ku.mkFilename(knpage, t[1], outdir)
+        outfilenames.append(outfilename)
+        cv2.imwrite(outfilename, om)
+    return outfilenames
 
 def write_collected_boxes_to_file(knpage, outdir=None):
     if not hasattr(knpage, 'collected_boxes'):
@@ -110,7 +150,9 @@ def write_collected_boxes_to_file(knpage, outdir=None):
     for box in knpage.collected_boxes:
         x, y, w, h = box
         cv2.rectangle(om, (x, y), (x + w, y + h), [0, 0, 255])
-    knpage.write(ku.mkFilename(knpage, '_collected_box', outdir), om)
+    outfilename = ku.mkFilename(knpage, '_collected_box', outdir)
+    knpage.write(outfilename, om)
+    return outfilename
 
 def write_original_with_collected_boxes_to_file(knpage, outdir=None):
     """
@@ -132,10 +174,12 @@ def write_original_with_collected_boxes_to_file(knpage, outdir=None):
     for box in knpage.collected_boxes:
         x, y, w, h = box
         cv2.rectangle(om, (x, y), (x + w, y + h), [0, 0, 255])
-    knpage.write(ku.mkFilename(knpage, '_orig_w_collected_box', outdir), om)
+    outfilename = ku.mkFilename(knpage, '_orig_w_collected_box', outdir)
+    knpage.write(outfilename, om)
+    return outfilename
 
 def write_all(knpage, outdir=None):
-    write_data_file(knpage, outdir)
+    write_contours_and_hierarchy_data_to_textfile(knpage, outdir)
     write_binarized_file(knpage, outdir)
     write_contours_bounding_rect_to_file(knpage, outdir)
     write_original_with_contour_file(knpage, outdir)
