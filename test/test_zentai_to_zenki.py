@@ -109,6 +109,15 @@ class TestZentaiToZenki():
         assert os.path.exists(fpaths[1])
         assert os.path.exists(fpaths[2])
 
+    def test_dispose_boxes(self, kn00900):
+        kn00900.dispose_boxes()
+        fpaths = write_boxes_to_file(kn00900, DATA_DIR+'/1062973/k009/00',(1, 1000), '_1_1000_after_dispose')
+        assert kn00900 != None
+        assert os.path.exists(fpaths[0])
+        assert os.path.exists(fpaths[1])
+        assert os.path.exists(fpaths[2])
+
+
     def test_write_collected_boxes_to_file(self, kn00900):
         fpath = write_collected_boxes_to_file(kn00900, DATA_DIR+'/1062973/k009/00')
         assert kn00900 != None

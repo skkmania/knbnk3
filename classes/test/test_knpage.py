@@ -42,41 +42,6 @@ class TestKnPage():
         assert kn.centroids != None
         assert len(kn.centroids) == 3160
 
-
-
-    def test_write_data_file(self, kn005):
-        kn = KnPage(params=kn005)
-        kn.write_data_file(DATA_DIR)
-
-    def test_write_original_with_contour_file(self, kn005):
-        kn = KnPage(params=kn005)
-        kn.write_original_with_contour_file(DATA_DIR)
-
-    def test_write_binarized_file(self, kn005):
-        kn = KnPage(params=kn005)
-        kn.write_binarized_file(DATA_DIR)
-
-    def test_write_original_with_contour_and_rect_file(self, kn005):
-        kn = KnPage(params=kn005)
-        kn.write_original_with_contour_and_rect_file(DATA_DIR)
-
-    def test_write_with_params(self, kn005):
-        kn = KnPage(params=kn005)
-        kn.write_data_file(DATA_DIR)
-        kn.write_binarized_file(DATA_DIR)
-        kn.write_contours_bounding_rect_to_file(DATA_DIR)
-        kn.write_original_with_contour_file(DATA_DIR)
-        kn.write_original_with_contour_and_rect_file(DATA_DIR)
-
-    """
-    def test_write_all(self):
-        fname = DATA_DIR + '/twletters.jpg'
-        for i in range(2,9):
-          params = DATA_DIR + '/twletters_0' + str(i) + '.json'
-          kn = KnPage(fname, params)
-          kn.write_all(DATA_DIR)
-    """
-
     def test_include(self, kn005):
         box1 = (20, 30, 10, 10)
         box2 = (25, 35, 15, 15)
@@ -160,15 +125,3 @@ class TestKnPage():
         kn = KnPage(params=kn005)
         kn.sweep_included_boxes()
         kn.write_boxes_to_file(DATA_DIR)
-
-    def test_write_self_boxes_to_file(self, kn005):
-        kn = KnPage(params=kn005)
-        kn.getCentroids()
-        kn.write_self_boxes_to_file(DATA_DIR)
-
-    # this test will take a long time(about 200 seconds)
-    def test_collect_boxes(self, kn005):
-        kn = KnPage(params=kn005)
-        kn.collect_boxes()
-        kn.write_collected_boxes_to_file(DATA_DIR)
-        kn.write_original_with_collected_boxes_to_file(DATA_DIR)
