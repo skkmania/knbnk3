@@ -7,6 +7,7 @@ import os.path
 from operator import itemgetter
 from functools import reduce
 import classes.knutil as ku
+import classes.boxtools as bt
 #from operator import itemgetter, attrgetter
 
 
@@ -65,7 +66,8 @@ class KnPage:
     def __init__(self, fname=None, datadir=None, params=None, outdir=None):
         if params is None:
             raise KnPageException('params is None')
-        self.parameters = params
+        # self.parameters = params
+        self.read_parameter(params)
         self.imgfullpath = params.get_imgFullPath()
         if params['page']['imgfname'] and params['page']['pagedir']:
             self.imgfullpath = "/".join([params['param']['outdir'], params['koma']['komadir'], params['page']['pagedir'], params['page']['imgfname']])
@@ -102,10 +104,18 @@ class KnPage:
             self.mcbs = self.p['page']['mcbs']
         else:
             self.mcbs = 10
-        self.pagedir = "/".join([self.p['param']['workdir'],
+        self.pagedir = "/".join([self.p['param']['topdir'],
                                  self.p['book']['bookdir'],
                                  self.p['koma']['komadir'],
                                  self.p['page']['pagedir']])
+        if "collected_box_min_size" in self.parameters:
+            self.cb_min = self.parameters['collected_box_min_size']
+        else:
+            self.cb_min = 10
+        if "collected_box_max_size" in self.parameters:
+            self.cb_max = self.parameters['collected_box_max_size']
+        else:
+            self.cb_max = 100
 
     def get_img(self):
         if os.path.exists(self.imgfullpath):
@@ -121,7 +131,7 @@ class KnPage:
                 self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
                 self.getBinarized()
         else:
-            raise KnPageException('%s not found' % self.imgfname)
+            raise KnPageException('%s not found' % self.imgfullpath)
 
     def write(self, outfilename=None, om=None):
         if om is None:
@@ -138,10 +148,12 @@ class KnPage:
 
     def getCentroids(self, box_min=16, box_max=48):
         """
-        contoursの重心のリスト
-        :param box_min:
-        :param box_max:
-        :return:
+        contoursの重心（計算の簡便のためにcontourの外接方形の重心で代用）のリスト
+        ただし、すべてのcontoursをカバーしていない
+        このリストからは小さすぎるboxと大きすぎるboxは排除している
+        :param box_min:　リストに含めるboxのサイズの下限
+        :param box_max:　リストに含めるboxのサイズの上限
+        :return:　戻り値はないが、このメソッドにより、self.centroids　が内容を持つ
         """
         if not hasattr(self, 'contours'):
             self.getContours()
@@ -164,17 +176,17 @@ class KnPage:
         binarize された配列を self.binarized にセットする
         parameters必須。
         """
-        if 'threshold' in self.parameters['koma']:
-            thresh_low, thresh_high, typeval = self.parameters['koma']['threshold']
+        if 'threshold' in self.p['koma']:
+            thresh_low, thresh_high, typeval = self.p['koma']['threshold']
             ret, self.binarized =\
                 cv2.threshold(self.gray, thresh_low, thresh_high, typeval)
-        elif 'canny' in self.parameters['koma']:
-            minval, maxval, apertureSize = self.parameters['koma']['canny'][0]
+        elif 'canny' in self.p['koma']:
+            minval, maxval, apertureSize = self.p['koma']['canny'][0]
             self.binarized = cv2.Canny(self.gray, minval, maxval, apertureSize)
-        elif 'adaptive' in self.parameters['koma']:
+        elif 'adaptive' in self.p['koma']:
             self.binarized =\
                 cv2.adaptiveThreshold(self.gray,
-                                      self.parameters['koma']['adaptive'])
+                                      self.p['koma']['adaptive'])
 
     def getGradients(self):
         """
@@ -253,8 +265,8 @@ class KnPage:
         box1 と box2 が交わるか接するならtrueを返す。
         marginを指定することですこし離れていても接すると判定.
         """
-        if 'ismgn' in self.parameters['page']:
-            xm, ym = self.parameters['page']['ismgn']
+        if 'ismgn' in self.parameters:
+            xm, ym = self.parameters['ismgn']
         else:
             xm, ym = (20, 8)  # default
 
@@ -281,18 +293,6 @@ class KnPage:
 
     def v_apart(self, ay1, ay2, by1, by2, ym):
         return ay2 < (by1 - ym) or (by2 + ym) < ay1
-
-    def get_boundingBox(self, boxes):
-        """
-        入力のboxの形式は(x,y,w,h)
-        出力のboxの形式も(x,y,w,h)
-        (x,y,w,h) -> (x,y,x+w,y+h)
-        """
-        target = [(x, y, x + w, y + h) for (x, y, w, h) in boxes]
-        x1, y1, d1, d2 = list(map(min, list(zip(*target))))
-        d1, d2, x2, y2 = list(map(max, list(zip(*target))))
-        # (x,y,x+w,y+h) -> (x,y,x,y)
-        return (x1, y1, x2 - x1, y2 - y1)
 
     def sweep_included_boxes(self, boxes=None):
         """
@@ -365,14 +365,7 @@ class KnPage:
         else:
             return []
 
-    def write_self_boxes_to_file(self, outdir):
-        with open(ku.mkFilename(self, '_self_boxes', outdir, '.txt'), 'w') as f:
-            f.write("self.boxes\n")
-            for box in self.boxes:
-                f.write(str(box) + "\n")
-            f.write("\n")
-
-    def collect_boxes(self):
+    def collect_boxes_with_debug(self):
         """
         bounding boxを包含するboxに統合し、文字を囲むboxの取得を試みる
         """
@@ -382,8 +375,6 @@ class KnPage:
 
         # w, h どちらかが200以上のboxは排除
         self.boxes = [x for x in self.boxes if (x[2] < 200) and (x[3] < 200)]
-
-        # self.write_self_boxes_to_file('')    # for debug
 
         self.collected_boxes = []
         adjs = []
@@ -406,14 +397,69 @@ class KnPage:
             adjs.append(abox)
             #f.write('adjs after append: ' + str(adjs) + "\n")    # for debug
             if len(adjs) > 0:
-                boundingBox = self.get_boundingBox(adjs)
+                list_of_adjs = bt.recheck_adjs(adjs)
+                for adj in list_of_adjs:
+                    if len(adj) > 0:
+                        boundingBox = bt.get_boundingBox(adj)
             #    f.write('boundingBox : '
             #            + str(boundingBox) + "\n")    # for debug
-                self.collected_boxes.append(boundingBox)
+                        if self.qualify_collected_box(boundingBox):
+                            self.collected_boxes.append(boundingBox)
             #    f.write('self.collected_boxes : '
             #            + str(self.collected_boxes) + "\n")    # for debug
 
         #f.close()    # for debug
+
+    def collect_boxes(self):
+        """
+        bounding boxを包含するboxに統合し、文字を囲むboxの取得を試みる
+        """
+
+        if len(self.boxes) == 0:
+            self.getCentroids()
+        # self.dispose_boxes()
+
+        # w, h どちらかが200以上のboxは排除
+        self.boxes = [x for x in self.boxes if (x[2] < 200) and (x[3] < 200)]
+
+        self.collected_boxes = []
+        adjs = []
+
+        while len(self.boxes) > 0:
+            abox = self.boxes.pop()
+            adjs = self.get_adj_boxes(self.boxes, abox)
+            for x in adjs:
+                if x in self.boxes:
+                    self.boxes.remove(x)
+            adjs.append(abox)
+            if len(adjs) > 0:
+                list_of_adjs = bt.recheck_adjs(adjs)
+                for adj in list_of_adjs:
+                    if len(adj) > 0:
+                        boundingBox = bt.get_boundingBox(adj)
+                        if self.qualify_collected_box(boundingBox):
+                            self.collected_boxes.append(boundingBox)
+
+    def qualify_collected_box(self, box):
+        """
+        box がcollected_boxと認められるか判定する
+        判断基準はboxの大きさ
+        paramsに定義された page collected_boxに関するパラメータ
+        "collected_box_min_size" : 数値 : collected_boxの面積がこれ以下のものは削除される
+        "collected_box_max_size" : 数値 : collected_boxの面積がこれ以上のものは削除される
+
+        :param box: (x, y, w, h)
+        :return: boolean :
+        """
+        result = (self.cb_min < box[2] < self.cb_max) and\
+                 (self.cb_min < box[3] < self.cb_max)
+        return result
+
+    def amend_collected_boxes(self):
+        """
+        """
+        # 周辺部にある小さすぎるものは削除する
+        return 0
 
     def dispose_boxes(self, debug=False):
         """
@@ -421,8 +467,8 @@ class KnPage:
         """
         # w, h どちらかが200以上のboxは排除
         # これはgraphの存在するページでは問題か？
-        if "toobig" in self.parameters["page"]:
-            toobig_w, toobig_h = self.parameters['page']['toobig']
+        if "toobig" in self.parameters:
+            toobig_w, toobig_h = self.parameters['toobig']
         else:
             toobig_w, toobig_h = [200, 200]
         self.boxes = [x for x in self.boxes
@@ -435,6 +481,21 @@ class KnPage:
 
         # 小さく、隣接するもののないboxは排除
         self.sweep_maverick_boxes()
+
+    def get_stats(self):
+        """
+        求める項目
+        collected_boxes関連（cb_で始まる)
+        cb_num : collected_boxの個数
+        cb_size_max : collected box の面積の最大値
+        cb_size_min : collected box の面積の最小値
+        cb_size_mean : collected box の面積の平均値
+
+        raws_num :
+        columns_num :
+
+        :return:
+        """
 
     @ku.deblog
     def estimate_char_size(self):
@@ -522,6 +583,21 @@ class KnPage:
         cv2.imwrite(ku.mkFilename(self, '_rotated%s' % fix, outdir),
                     self.rotated_img)
 
+    def get_neighbors(self, box, x, y):
+        """
+        self.boxesから、boxの近所にあるboxを選びそのリストを返す
+        近所とは、boxをx方向にx，y方向にy拡大した矩形と交わることとする
+        """
+        x0, y0, w, h = box
+        x1 = max(0, x0 - x)
+        y1 = max(0, y0 - y)
+        w = w + 2 * x
+        h = h + 2 * y
+        newbox = (x1, y1, w, h)
+        ret = [b for b in self.boxes if self.intersect(newbox, b, 0, 0)]
+        if box in ret:
+            ret.remove(box)
+        return ret
 
     def sweep_maverick_boxes(self):
         """
@@ -530,8 +606,8 @@ class KnPage:
         boxes = self.boxes
         for box in boxes:
             neighbors = self.get_neighbors(box, 10, 20)
-            self.logger.debug('box: %s' % str(box))
-            self.logger.debug('# of neighbors: %d' % len(neighbors))
+            # self.logger.debug('box: %s' % str(box))
+            # self.logger.debug('# of neighbors: %d' % len(neighbors))
             if len(neighbors) == 0:
                 self.boxes.remove(box)
 
@@ -582,7 +658,7 @@ class KnPage:
         if mgn:
             self.pgmgn_x, self.pgmgn_y = mgn
         else:
-            self.pgmgn_x, self.pgmgn_y = self.parameters['page']['pgmgn']
+            self.pgmgn_x, self.pgmgn_y = self.parameters['pgmgn']
 
 
 

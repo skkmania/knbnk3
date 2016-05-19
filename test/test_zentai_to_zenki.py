@@ -50,6 +50,8 @@ Default_Param = {
         "boundingRect": [16, 32],
         "mode":         "EXTERNAL",
         "method":       "NONE",
+        "collected_box_min_size": 10,
+        "collected_box_max_size": 100,
         "canny":        [50, 200, 3]
     }
 }
@@ -110,8 +112,9 @@ class TestZentaiToZenki():
         assert os.path.exists(fpaths[2])
 
     def test_dispose_boxes(self, kn00900):
+        kn00900.getCentroids()
         kn00900.dispose_boxes()
-        fpaths = write_boxes_to_file(kn00900, DATA_DIR+'/1062973/k009/00',(1, 1000), '_1_1000_after_dispose')
+        fpaths = write_boxes_to_file(kn00900, DATA_DIR+'/1062973/k009/00',(1, 2000), '_1_2000_after_dispose')
         assert kn00900 != None
         assert os.path.exists(fpaths[0])
         assert os.path.exists(fpaths[1])
@@ -127,6 +130,13 @@ class TestZentaiToZenki():
         fpath = write_original_with_collected_boxes_to_file(kn00900, DATA_DIR + '/1062973/k009/00')
         assert kn00900 != None
         assert os.path.exists(fpath)
+
+    def test_save_collected_boxes_histogram_to_file(self, kn00900):
+        kn00900.collect_boxes()
+        fpath = save_collected_boxes_histogram_to_file(kn00900, DATA_DIR + '/1062973/k009/00')
+        assert kn00900 != None
+        assert os.path.exists(fpath)
+
 
 class TestAllPageOutput():
 

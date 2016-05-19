@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import classes.knutil as ku
+import classes.boxtools as bt
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def write_contours_and_hierarchy_data_to_textfile(knpage, outdir=None, ext=None):
@@ -186,3 +188,17 @@ def write_all(knpage, outdir=None):
     write_original_with_contour_and_rect_file(knpage, outdir)
     write_collected_boxes_to_file(knpage, outdir)
     write_original_with_collected_boxes_to_file(knpage, outdir)
+
+def save_collected_boxes_histogram_to_file(knpage, outdir=None):
+    """
+    横軸 : collected_box の面積
+    縦軸 : collected_box の個数
+    :return: fullpath of output
+    """
+    fig = plt.figure()
+    ax = fig.add_subplot(1,1,1)
+    areas = list(map(bt.get_box_area, knpage.collected_boxes))
+    ax.hist(areas, bins=50)
+    outfilename = ku.mkFilename(knpage, '_collected_box_area_histogram', outdir)
+    fig.savefig(outfilename)
+    return outfilename

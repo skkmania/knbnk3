@@ -71,6 +71,16 @@ __all__ = ["KnParam", "KnParamException", "KnParamParamsException", "HOME_DIR", 
 #     "CENTER_K" : num  # 3
 #   }
 #
+#  page layout に関するパラメータ
+#    "chars"  :  0 or 1  :  0 このページには文字がない
+#                           1 このページには文字がある
+#    "chars_direction"  :  0 or 1 :  0  縦書き,  1  横書き  2  mixed
+#    "num_of_graphs"  :  数値  :  ページ内の挿絵、グラフ、写真などの点数
+#
+#  page collected_boxに関するパラメータ
+#    "collected_box_min_size" : 数値 : collected_boxの面積がこれ以下のものは削除される
+#    "collected_box_max_size" : 数値 : collected_boxの面積がこれ以上のものは削除される
+#
 
 MandatoryFields = {
     "param": ["arcdir", "paramfdir", "topdir", "outdir",
