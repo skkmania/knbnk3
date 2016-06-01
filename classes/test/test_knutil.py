@@ -178,3 +178,18 @@ class TestInterSection:
         l2 = self.slide(5, 8, line2)
         result = ku.getIntersection(l1, l2)
         assert result == (9, 10)
+
+class TestGetRangeList:
+    def test_get_range_list(self):
+        hist = [0,0,0,100,101,102,0,0,10,0,150,1501,152,153,0,0,0]
+        std = 50
+        result = ku.get_range_list(hist, std)
+        assert result == [[3, 5], [10, 13]]
+        hist = [0,0,10,20,10,0,0]
+        std = 30
+        result = ku.get_range_list(hist, std)
+        assert result == []
+        hist = [0,0,10,20,10,0,0]
+        std = 0
+        result = ku.get_range_list(hist, std)
+        assert result == [[0,6]]

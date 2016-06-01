@@ -45,6 +45,33 @@ class KnUtilParamsException(Exception):
         return repr(self.value)
 
 
+def get_range_list(hist, blanc_std):
+    """
+    数値のリストから、基準以上の値が連続する区間を探し、それらのリストを返す
+    区間は、もとのリストのindexのリスト [start, end] で表現する
+        例:
+       　hist : [0,0,0,30,50,40,10,0,0,40,30,5,0],  blanc_std : 20 のとき、
+        結果は  [[3,5],[9,10]] となる
+    区間が見つからないときは、空のリストを返す
+    :param hist:  list of number
+    :param blanc_std: number
+    :return: list of list of number
+    """
+    range_list = []  # 求める最終結果. 数字のリストのリスト
+    range_flag = False  # rangeの中途にあるかどうか
+    for i, v in enumerate(hist):
+        if v >= blanc_std:
+            if not range_flag:
+                range_flag = True
+                range_list.append([i])
+        else:
+            if range_flag:
+                range_flag = False
+                range_list[-1].append(i - 1)
+    if range_list == [[0]]:  #  histの全要素がblanc_std以上のとき
+        range_list = [[0, len(hist) - 1]]
+    return range_list
+    
 def print_params_files(params_list):
     ret = []
     for params in params_list:
