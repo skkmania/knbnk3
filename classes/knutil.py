@@ -68,8 +68,12 @@ def get_range_list(hist, blanc_std):
             if range_flag:
                 range_flag = False
                 range_list[-1].append(i - 1)
+    if range_list == []:  # 区間が見つからないとき
+        return range_list
     if range_list == [[0]]:  #  histの全要素がblanc_std以上のとき
         range_list = [[0, len(hist) - 1]]
+    if len(range_list[-1]) == 1:  # hist[-1] >= blanc_std のとき
+        range_list[-1].append(len(hist) - 1)
     return range_list
     
 def print_params_files(params_list):

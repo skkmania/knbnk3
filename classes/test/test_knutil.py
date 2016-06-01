@@ -183,13 +183,44 @@ class TestGetRangeList:
     def test_get_range_list(self):
         hist = [0,0,0,100,101,102,0,0,10,0,150,1501,152,153,0,0,0]
         std = 50
-        result = ku.get_range_list(hist, std)
-        assert result == [[3, 5], [10, 13]]
+        assert [[3, 5], [10, 13]] == ku.get_range_list(hist, std)
+
         hist = [0,0,10,20,10,0,0]
         std = 30
-        result = ku.get_range_list(hist, std)
-        assert result == []
+        assert [] == ku.get_range_list(hist, std)
+
+        hist = [30, 0, 0, 10, 20, 10, 0, 0]
+        std = 30
+        assert [[0,0]] == ku.get_range_list(hist, std)
+
+        hist = [30, 30, 0, 0, 10, 20, 10, 0, 0]
+        std = 30
+        assert [[0,1]] == ku.get_range_list(hist, std)
+
+        hist = [0, 0, 10, 20, 10, 0, 0, 30, 30]
+        std = 30
+        assert [[7,8]] == ku.get_range_list(hist, std)
+
+        hist = [0, 0, 10, 20, 10, 0, 0, 30]
+        std = 30
+        assert [[7,7]] == ku.get_range_list(hist, std)
+
         hist = [0,0,10,20,10,0,0]
         std = 0
-        result = ku.get_range_list(hist, std)
-        assert result == [[0,6]]
+        assert [[0,6]] == ku.get_range_list(hist, std)
+
+        hist = [0]
+        std = 0
+        assert [[0, 0]] == ku.get_range_list(hist, std)
+
+        hist = [0]
+        std = 10
+        assert [] == ku.get_range_list(hist, std)
+
+        hist = [0,10]
+        std = 10
+        assert [[1, 1]] == ku.get_range_list(hist, std)
+
+        hist = [10,0]
+        std = 10
+        assert [[0,0]] == ku.get_range_list(hist, std)
