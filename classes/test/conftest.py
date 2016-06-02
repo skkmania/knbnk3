@@ -51,6 +51,7 @@ Default_Param = {
         "boundingRect": [16, 32],
         "mode":         "EXTERNAL",
         "method":       "NONE",
+        "threshold":    [255, 55, 3],
         "canny":        [50, 200, 3]
     }
 }

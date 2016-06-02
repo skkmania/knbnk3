@@ -129,6 +129,7 @@ class KnPage:
                 self.candidates = {'upper': [], 'lower': [],
                                    'center': [], 'left': [], 'right': []}
                 self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
+                self.clear_noise()
                 self.getBinarized()
         else:
             raise KnPageException('%s not found' % self.imgfullpath)
@@ -243,22 +244,6 @@ class KnPage:
         outfilename = ku.mkFilename(self, '_small_img_with_linesP', outdir)
         cv2.imwrite(outfilename, self.small_img_with_linesP)
 
-    def include(self, box1, box2):
-        """
-           box1 が box2 を包含するならtrueを返す。
-        """
-
-        ax1, ay1, w1, h1 = box1
-        ax2 = ax1 + w1
-        ay2 = ay1 + h1
-        bx1, by1, w2, h2 = box2
-        bx2 = bx1 + w2
-        by2 = by1 + h2
-
-        if (ax1 <= bx1) and (bx2 <= ax2) and (ay1 <= by1) and (by2 <= ay2):
-            return True
-        else:
-            return False
 
     def intersect(self, box1, box2, x_margin=None, y_margin=None):
         """
@@ -307,13 +292,13 @@ class KnPage:
             flag = True
 
         # w, h どちらかが200以上のboxは排除
-        boxes = [x for x in boxes if (x[2] < 200) and (x[3] < 200)]
+        # boxes = [x for x in boxes if (x[2] < 200) and (x[3] < 200)]
 
         temp_boxes = []
         while len(boxes) > 0:
             abox = boxes.pop()
-            boxes = [x for x in boxes if not self.include(abox, x)]
-            temp_boxes = [x for x in temp_boxes if not self.include(abox, x)]
+            boxes = [x for x in boxes if not bt.include(abox, x)]
+            temp_boxes = [x for x in temp_boxes if not bt.include(abox, x)]
             temp_boxes.append(abox)
 
         if flag:
@@ -420,7 +405,7 @@ class KnPage:
         # self.dispose_boxes()
 
         # w, h どちらかが200以上のboxは排除
-        self.boxes = [x for x in self.boxes if (x[2] < 200) and (x[3] < 200)]
+        #self.boxes = [x for x in self.boxes if (x[2] < 200) and (x[3] < 200)]
 
         self.collected_boxes = []
         adjs = []
@@ -454,12 +439,6 @@ class KnPage:
         result = (self.cb_min < box[2] < self.cb_max) and\
                  (self.cb_min < box[3] < self.cb_max)
         return result
-
-    def amend_collected_boxes(self):
-        """
-        """
-        # 周辺部にある小さすぎるものは削除する
-        return 0
 
     def dispose_boxes(self, debug=False):
         """
@@ -682,3 +661,25 @@ class KnPage:
                 self.getBoxesAndCentroids()
         self.x_sorted_boxes = sorted(self.boxes, key=itemgetter(0, 1))
         self.y_sorted_boxes = sorted(self.boxes, key=itemgetter(1, 0))
+
+    def clear_noise(self, max=None, under=None, type=None):
+        """
+        行間のノイズを消す
+        self.img を白黒反転し、黒地に白い文字が浮かぶ画像となる self.bw_not をつくり、さらに
+        しきい値処理して 55 より暗い点は全て０に、つまり真っ黒にする
+        その画像を self.bw_not_tozero とする
+        parameter の意味は　OpenCV threshold の文書を参照
+        :param max:  Integer 0 - 255 : threshold max_value
+        :param under: Integer 0 - 255 : threshold thresh_under
+        :param type: Integer 0 - 5 : cv2.THRESH_xxx に相当する数値
+        :return:
+        """
+        self.bw_not = cv2.bitwise_not(self.img)
+        if 'threshold' in self.parameters:
+            max_value, thresh_under, thresh_type = self.parameters['threshold']
+        else:
+            max_value = max or 255
+            thresh_under = under or 55
+            thresh_type = type or cv2.THRESH_TOZERO
+        ret, self.bw_not_tozero = cv2.threshold(self.bw_not, thresh_under, max_value, thresh_type)
+

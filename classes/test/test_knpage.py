@@ -125,3 +125,8 @@ class TestKnPage():
         kn = KnPage(params=kn005)
         kn.sweep_included_boxes()
         kn.write_boxes_to_file(DATA_DIR)
+
+    def test_clear_noise(self, knp):
+        kn = KnPage(params=knp)
+        kn.clear_noise()
+        kn.write(DATA_DIR+'/knp_bw_not_tozero.jpeg', kn.bw_not_tozero)
