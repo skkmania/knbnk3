@@ -136,4 +136,11 @@ class TestKnPage():
         kn.clear_noise()
         kn.get_line_imgs()
         for i, img in enumerate(kn.line_imgs):
-            kn.write(DATA_DIR+"/line_img_{0}.jpeg".format(i), img)
+            kn.write(DATA_DIR+"/1062973/k009/00/line_img_{0}.jpeg".format(i), img)
+
+    def test_get_chars(self, kaisetu):
+        kn = KnPage(params=kaisetu)
+        kn.clear_noise()
+        kn.get_line_imgs()
+        kn.get_chars()
+        assert len(kn.chars) == 407

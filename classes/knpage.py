@@ -6,6 +6,7 @@ import json
 import os.path
 from operator import itemgetter
 from functools import reduce
+import classes.knchar as kc
 import classes.knutil as ku
 import classes.boxtools as bt
 #from operator import itemgetter, attrgetter
@@ -698,3 +699,18 @@ class KnPage:
         self.line_imgs = []
         for i, gyou in enumerate(self.lines):
             self.line_imgs.append(self.bw_not_tozero[:, gyou[0]:gyou[1]])
+
+    def get_chars(self):
+        """
+        行画像を文字画像に分割し,KnChar オブジェクトを得る
+        :return:
+        """
+        self.chars = []
+        self.hist_vs = []
+        for i, line_img in enumerate(self.line_imgs):
+            self.hist_vs.append(np.sum(line_img, axis=1))
+        for i, hist_v in enumerate(self.hist_vs):
+            hist = ku.get_range_list(hist_v, 10)
+            for j, char in enumerate(hist):
+                char_img = self.line_imgs[i][char[0]:char[1], :]
+                self.chars.append(kc.KnChar(char_img, i, j))
