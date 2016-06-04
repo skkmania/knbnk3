@@ -117,6 +117,36 @@ def pytest_funcarg__kn005(request):
     return KnParam(param_dict)
 
 
+def pytest_funcarg__kaisetu(request):
+    param_dict = copy.deepcopy(Default_Param)
+    spec = {
+        "param": {
+            "logfilename": "kaisetu",
+            "outdir":      "/".join([DATA_DIR, "1062973"]),
+            "paramfdir":   "1062973",
+            "paramfname":  "kaisetu.json",
+            "balls":       ["kaisetu"]
+        },
+        "book": {
+            "bookdir":      "1062973",
+            "bookId":       "1062973"
+        },
+        "koma": {
+            "komadir":      'k009',
+            "komaId":       9,
+            "komaIdStr":    "009",
+            "imgfname":     "009.jpeg"
+        },
+        "page": {
+            "imgfname":     "009_0.jpeg"
+        }
+    }
+    for k, v in param_dict.items():
+        v.update(spec[k])
+    ku.check_test_environment(param_dict, 'kaisetu')
+    return KnParam(param_dict)
+
+
 def pytest_funcarg__knManyLines(request):
     param_dict = copy.deepcopy(Default_Param)
     spec = {

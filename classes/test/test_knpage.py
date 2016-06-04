@@ -130,3 +130,10 @@ class TestKnPage():
         kn = KnPage(params=knp)
         kn.clear_noise()
         kn.write(DATA_DIR+'/knp_bw_not_tozero.jpeg', kn.bw_not_tozero)
+
+    def test_get_line_imgs(self, kaisetu):
+        kn = KnPage(params=kaisetu)
+        kn.clear_noise()
+        kn.get_line_imgs()
+        for i, img in enumerate(kn.line_imgs):
+            kn.write(DATA_DIR+"/line_img_{0}.jpeg".format(i), img)

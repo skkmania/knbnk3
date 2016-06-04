@@ -674,7 +674,7 @@ class KnPage:
         :param type: Integer 0 - 5 : cv2.THRESH_xxx に相当する数値
         :return:
         """
-        self.bw_not = cv2.bitwise_not(self.img)
+        self.bw_not = cv2.bitwise_not(self.gray)
         if 'threshold' in self.parameters:
             max_value, thresh_under, thresh_type = self.parameters['threshold']
         else:
@@ -683,3 +683,18 @@ class KnPage:
             thresh_type = type or cv2.THRESH_TOZERO
         ret, self.bw_not_tozero = cv2.threshold(self.bw_not, thresh_under, max_value, thresh_type)
 
+    def get_line_imgs(self):
+        """
+        ページ画像を行ごとに分割する
+        :return:
+        """
+        self.hist_0 = np.sum(self.bw_not_tozero, axis=0)
+        lines = ku.get_range_list(self.hist_0, 300)
+        # 上のやりかただと、noise も行と認識してしまっているので
+        # 幅の狭すぎる行と、ページの両端にかかるものは削除する
+        lines = list(filter(lambda l: l[1] - l[0] > 10, lines))
+        self.lines = list(filter(lambda l: l[0] is not 0, lines))
+        # 上の結果に従って画像を行ごとに分割してみる
+        self.line_imgs = []
+        for i, gyou in enumerate(self.lines):
+            self.line_imgs.append(self.bw_not_tozero[:, gyou[0]:gyou[1]])
