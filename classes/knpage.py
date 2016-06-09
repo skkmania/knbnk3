@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
 import numpy as np
+from scipy import ndimage
 import cv2
 import json
 import os.path
@@ -714,3 +715,52 @@ class KnPage:
             for j, char in enumerate(hist):
                 char_img = self.line_imgs[i][char[0]:char[1], :]
                 self.chars.append(kc.KnChar(char_img, i, j))
+
+    def get_x_zero(self, img):
+        """
+        img のヒストグラムをとり
+        値が０である要素数を返す
+        :param img : np.ndarray :
+        :return: integer : 0の数
+        """
+        hist = np.sum(img, axis=0)
+        return np.count_nonzero(hist == 0)
+
+    def one_degree_plus(self, degree):
+        """
+        self.bw_not_tozero を degree + 1 度 回転した画像の
+        x数を返す
+        :param degree:
+        :return:  integer : 0の数
+        """
+        r_img = ndimage.rotate(self.bw_not_tozero, degree + 1)
+        return self.get_x_zero(r_img)
+
+    def adjust_rotation(self):
+        """
+        ページ画像の回転を修正する角度を求める
+        :return: float : 角度(in degree)
+        """
+        if not hasattr(self, 'bw_not_tozero'):
+            self.clear_noise()
+        x = self.get_x_zero(self.bw_not_tozero)
+        tmp_degree = 0
+        x_1 = self.one_degree_plus(tmp_degree)
+        tmp_degree = tmp_degree + 1
+        while x_1 > x:
+            x = x_1
+            x_1 = self.one_degree_plus(tmp_degree)
+            tmp_degree = tmp_degree + 1
+
+        result = self.get_tenth(tmp_degree)
+        return result
+
+    def get_tenth(self, degree):
+        """
+        degree より小刻みに小さい角度で回転して,最も成績の良い角度を返す
+        :param degree:
+        :return:
+        """
+        degrees = [degree - 0.2, degree - 0.4, degree - 0.6, degree - 0.8]
+        xes = [self.get_x_zero(ndimage.rotate(self.bw_not_tozero, degree)) for degree in degrees]
+        return degrees[xes.index(max(xes))]

@@ -144,3 +144,27 @@ class TestKnPage():
         kn.get_line_imgs()
         kn.get_chars()
         assert len(kn.chars) == 407
+
+    def test_get_x_zero(self, kaiten):
+        kn = KnPage(params=kaiten)
+        kn.clear_noise()
+        result = kn.get_x_zero(kn.bw_not_tozero)
+        assert result == 112
+
+    def test_one_degree_plus(self, kaiten):
+        kn = KnPage(params=kaiten)
+        kn.clear_noise()
+        result = kn.one_degree_plus(0)
+        assert result == 240
+
+    def test_get_tenth(self, kaiten):
+        kn = KnPage(params=kaiten)
+        kn.clear_noise()
+        result = kn.get_tenth(2)
+        assert result == 1.8
+
+    def test_adust_rotation(self, kaiten):
+        kn = KnPage(params=kaiten)
+        kn.clear_noise()
+        result = kn.adjust_rotation()
+        assert result == 2.2
