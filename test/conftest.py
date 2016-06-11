@@ -5,8 +5,8 @@ import copy
 import json
 import shutil
 import sys
-
 from os import path
+import classes.knutil as ku
 TEST_ROOT = path.dirname( path.abspath(__file__))
 CLASSES_ROOT = path.split(TEST_ROOT)[0]
 sys.path.append(TEST_ROOT)
@@ -51,6 +51,7 @@ Default_Param = {
         "boundingRect": [16, 32],
         "mode":         "EXTERNAL",
         "method":       "NONE",
+        "threshold":    [255, 55, 3],
         "canny":        [50, 200, 3]
     }
 }
@@ -115,6 +116,34 @@ def pytest_funcarg__kn005(request):
     check_test_environment(param_dict, 'twletters')
     return KnParam(param_dict)
 
+def pytest_funcarg__kaisetu(request):
+    param_dict = copy.deepcopy(Default_Param)
+    spec = {
+        "param": {
+            "logfilename": "kaisetu",
+            "outdir":      "/".join([DATA_DIR, "1062973"]),
+            "paramfdir":   "1062973",
+            "paramfname":  "kaisetu.json",
+            "balls":       ["kaisetu"]
+        },
+        "book": {
+            "bookdir":      "1062973",
+            "bookId":       "1062973"
+        },
+        "koma": {
+            "komadir":      'k009',
+            "komaId":       9,
+            "komaIdStr":    "009",
+            "imgfname":     "009.jpeg"
+        },
+        "page": {
+            "imgfname":     "009_0.jpeg"
+        }
+    }
+    for k, v in param_dict.items():
+        v.update(spec[k])
+    ku.check_test_environment(param_dict, 'kaisetu')
+    return KnParam(param_dict)
 
 def pytest_funcarg__knManyLines(request):
     param_dict = copy.deepcopy(Default_Param)

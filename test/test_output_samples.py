@@ -69,4 +69,14 @@ class TestOutputSamples():
         write_original_with_contour_and_rect_to_file(kn, DATA_DIR)
         assert kn != None
 
-
+    def test_save_char_img_to_file(self, kaisetu):
+        kn = KnPage(params=kaisetu)
+        kn.clear_noise()
+        kn.get_line_imgs()
+        kn.get_chars()
+        save_char_img_to_file(kn, DATA_DIR, 0, 0)
+        save_char_img_to_file(kn, DATA_DIR, 1, 1)
+        save_char_img_to_file(kn, DATA_DIR, line=2)
+        save_char_img_to_file(kn, DATA_DIR, count=2)
+        save_char_img_to_file(kn, DATA_DIR)
+        assert kn != None

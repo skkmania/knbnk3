@@ -23,10 +23,12 @@ def write_contours_and_hierarchy_data_to_textfile(knpage, outdir=None, ext=None)
             f.write("\n")
     return outfilename
 
+
 def write_boxes_coordinates_data_to_textfile(knpage, outdir=None, ext=None):
     """
     このコマンドが発行された時点でのknpage.boxesの座標データをテキストファイルとして出力する。
     knpage.boxesはknpageが生成されたとき空のリストとして作成され、その後多くの関数により内容が増減する
+    :param ext:
     :param knpage:
     :param outdir:
     :return:
@@ -59,10 +61,15 @@ def write_gradients(knpage, outdir=None):
 
 
 def writeContour(knpage):
+    """
+    show all contours
+    :param knpage:
+    """
     img_of_contours = np.zeros(knpage.img.shape, np.uint8)
     for point in knpage.contours:
         x, y = point[0][0]
         cv2.circle(img_of_contours, (x, y), 1, [0, 0, 255])
+
 
 def write_contours_bounding_rect_to_file(knpage, outdir=None):
     if not hasattr(knpage, 'contours'):
@@ -79,6 +86,7 @@ def write_contours_bounding_rect_to_file(knpage, outdir=None):
     knpage.write(outfilename, om)
     return outfilename
 
+
 def write_original_with_contour_to_file(knpage, outdir=None):
     if not hasattr(knpage, 'contours'):
         knpage.getContours()
@@ -89,6 +97,7 @@ def write_original_with_contour_to_file(knpage, outdir=None):
     outfilename = ku.mkFilename(knpage, '_orig_w_cont', outdir)
     knpage.write(outfilename, knpage.orig_w_cont)
     return outfilename
+
 
 def write_original_with_contour_and_rect_to_file(knpage, outdir=None):
     if not hasattr(knpage, 'contours'):
@@ -107,6 +116,7 @@ def write_original_with_contour_and_rect_to_file(knpage, outdir=None):
     outfilename = ku.mkFilename(knpage, '_orig_w_cont_and_rect', outdir)
     knpage.write(outfilename, knpage.orig_w_cont_and_rect)
     return outfilename
+
 
 def write_boxes_to_file(knpage, outdir=None, target=None, fix=None):
     """
@@ -144,6 +154,7 @@ def write_boxes_to_file(knpage, outdir=None, target=None, fix=None):
         cv2.imwrite(outfilename, om)
     return outfilenames
 
+
 def write_collected_boxes_to_file(knpage, outdir=None):
     if not hasattr(knpage, 'collected_boxes'):
         knpage.collect_boxes()
@@ -156,6 +167,7 @@ def write_collected_boxes_to_file(knpage, outdir=None):
     knpage.write(outfilename, om)
     return outfilename
 
+
 def write_original_with_collected_boxes_to_file(knpage, outdir=None):
     """
     collect_boxes()を３回繰り返して抜けを補おうという、ちと情けない方法によっているため
@@ -166,10 +178,10 @@ def write_original_with_collected_boxes_to_file(knpage, outdir=None):
     """
     if not hasattr(knpage, 'collected_boxes'):
         knpage.collect_boxes()
-        knpage.boxes = knpage.collected_boxes
-        knpage.collect_boxes()
-        knpage.boxes = knpage.collected_boxes
-        knpage.collect_boxes()
+    #        knpage.boxes = knpage.collected_boxes
+    #        knpage.collect_boxes()
+    #        knpage.boxes = knpage.collected_boxes
+    #        knpage.collect_boxes()
 
     knpage.orig_w_collected = knpage.img.copy()
     om = knpage.orig_w_collected
@@ -180,14 +192,16 @@ def write_original_with_collected_boxes_to_file(knpage, outdir=None):
     knpage.write(outfilename, om)
     return outfilename
 
+
 def write_all(knpage, outdir=None):
     write_contours_and_hierarchy_data_to_textfile(knpage, outdir)
-    write_binarized_file(knpage, outdir)
+    write_binarized_to_file(knpage, outdir)
     write_contours_bounding_rect_to_file(knpage, outdir)
-    write_original_with_contour_file(knpage, outdir)
-    write_original_with_contour_and_rect_file(knpage, outdir)
+    write_original_with_contour_to_file(knpage, outdir)
+    write_original_with_contour_and_rect_to_file(knpage, outdir)
     write_collected_boxes_to_file(knpage, outdir)
     write_original_with_collected_boxes_to_file(knpage, outdir)
+
 
 def save_collected_boxes_histogram_to_file(knpage, outdir=None):
     """
@@ -196,9 +210,38 @@ def save_collected_boxes_histogram_to_file(knpage, outdir=None):
     :return: fullpath of output
     """
     fig = plt.figure()
-    ax = fig.add_subplot(1,1,1)
+    ax = fig.add_subplot(1, 1, 1)
     areas = list(map(bt.get_box_area, knpage.collected_boxes))
     ax.hist(areas, bins=50)
     outfilename = ku.mkFilename(knpage, '_collected_box_area_histogram', outdir)
     fig.savefig(outfilename)
     return outfilename
+
+
+def save_char_img_to_file(knpage, outdir=None, line=None, count=None):
+    """
+    指定されたページの個々の文字画像をファイルに出力する
+    :param knpage:
+    :param outdir:
+    :param line: 行数　省略したときは、全行を意味する
+    :param count: 行のなかの何文字目　省略したときは、行の全文字を意味する
+    :return:
+    """
+    if line:
+        if count:
+            outfilename = ku.mkFilename(knpage, "_char_{0}_{1}".format(line, count), outdir)
+            knpage.write(outfilename, knpage.chars[line][count].img)
+        else:
+            for i, chr in enumerate(knpage.chars[line]):
+                outfilename = ku.mkFilename(knpage, "_char_{0}_{1}".format(line, i), outdir)
+                knpage.write(outfilename, knpage.chars[line][i].img)
+    else:
+        if count:
+            for i, line in enumerate(knpage.chars):
+                outfilename = ku.mkFilename(knpage, "_char_{0}_{1}".format(i, count), outdir)
+                knpage.write(outfilename, knpage.chars[i][count].img)
+        else:
+            for i, line in enumerate(knpage.chars):
+                for j, chr in enumerate(line):
+                    outfilename = ku.mkFilename(knpage, "_char_{0}_{1}".format(i, j), outdir)
+                    knpage.write(outfilename, knpage.chars[i][j].img)
