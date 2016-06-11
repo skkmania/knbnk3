@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
 import numpy as np
-from scipy import ndimage
+from scipy import ndimage, stats
 import cv2
 import json
 import os.path
@@ -688,8 +688,11 @@ class KnPage:
     def get_line_imgs(self):
         """
         ページ画像を行ごとに分割する
+        縦書き前提
         :return:
         """
+        if not hasattr(self, 'bw_not_tozero'):
+            self.clear_noise()
         self.hist_0 = np.sum(self.bw_not_tozero, axis=0)
         lines = ku.get_range_list(self.hist_0, 300)
         # 上のやりかただと、noise も行と認識してしまっているので
@@ -700,21 +703,47 @@ class KnPage:
         self.line_imgs = []
         for i, gyou in enumerate(self.lines):
             self.line_imgs.append(self.bw_not_tozero[:, gyou[0]:gyou[1]])
+        # 縦書き前提
+        self.line_imgs.reverse()
 
-    def get_chars(self):
+    def get_hist_vs(self):
         """
-        行画像を文字画像に分割し,KnChar オブジェクトを得る
+        行画像の水平方向のヒストグラムを算出する
         :return:
         """
-        self.chars = []
+        if not hasattr(self, 'line_imgs'):
+            self.get_line_imgs()
         self.hist_vs = []
         for i, line_img in enumerate(self.line_imgs):
             self.hist_vs.append(np.sum(line_img, axis=1))
+
+    def get_chars(self, minimum=3):
+        """
+        行画像を文字画像に分割し,KnChar オブジェクトを得る
+        :param minimum : char img の最低限の高さ
+        :return:
+        """
+        if not hasattr(self, 'hist_vs'):
+            self.get_hist_vs()
+        self.chars = []
         for i, hist_v in enumerate(self.hist_vs):
             hist = ku.get_range_list(hist_v, 10)
+            self.chars.append([])
             for j, char in enumerate(hist):
-                char_img = self.line_imgs[i][char[0]:char[1], :]
-                self.chars.append(kc.KnChar(char_img, i, j))
+                if char[1] - char[0] >= minimum:
+                    char_img = self.line_imgs[i][char[0]:char[1]+1, :]
+                    self.chars[i].append(kc.KnChar(char_img, i, j))
+
+    def estimate_upper_mergin(self):
+        """
+        縦書きを前提
+        行の上の余白の広さを決めてしまう
+        :return: integer : page 上部の余白の広さ
+        """
+        if not hasattr(self, 'hist_vs'):
+            self.get_hist_vs()
+
+
 
     def get_x_zero(self, img):
         """

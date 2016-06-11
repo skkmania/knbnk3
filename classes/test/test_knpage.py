@@ -140,10 +140,8 @@ class TestKnPage():
 
     def test_get_chars(self, kaisetu):
         kn = KnPage(params=kaisetu)
-        kn.clear_noise()
-        kn.get_line_imgs()
         kn.get_chars()
-        assert len(kn.chars) == 407
+        assert len(kn.chars) == 12
 
     def test_get_x_zero(self, kaiten):
         kn = KnPage(params=kaiten)
