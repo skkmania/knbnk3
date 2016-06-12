@@ -74,6 +74,7 @@ class TestOutputSamples():
         kn.clear_noise()
         kn.get_line_imgs()
         kn.get_chars()
+        kn.check_chars()
         save_char_img_to_file(kn, DATA_DIR, 0, 0)
         save_char_img_to_file(kn, DATA_DIR, 1, 1)
         save_char_img_to_file(kn, DATA_DIR, line=2)
