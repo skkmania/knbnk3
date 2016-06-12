@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>P009 0</title>
+</head>
+<script type="text/JavaScript">
+
+	//ボールレイヤを画面に生成する処理
+	window.onload = function AddChars() {
+        //charsのイメージ画像を読み込む
+        var Imgs = [];
+        for (i = 0; i < 12; i++) {
+            Imgs[i] = [];
+           for (j = 0; j < 38; j++) {
+               Imgs[i][j] = document.createElement('img');
+               Imgs[i][j].src = "Z:/knbnk/data/009_0_char_" + i + "_" + j + ".jpeg";
+               Imgs[i][j].style.left = 1000 - 70*i + "px";
+               Imgs[i][j].style.top = 50 + 45*j + "px";
+               Imgs[i][j].style.position = "absolute";
+
+               document.body.appendChild(Imgs[i][j]);
+           }
+        }
+    }
+
+</script>
+<body>
+</body>
+</html>
