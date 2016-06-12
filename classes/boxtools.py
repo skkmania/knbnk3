@@ -80,8 +80,10 @@ def clustering(adjs, char_len):
                 break
             i = i + 1
 
+    return ret_list
 
-def recheck_adjs(adjs, char_size=20):
+
+def recheck_adjs_old(adjs, char_size=20):
     """
     :param adjs: list of boxes
     :param char_size: integer: 文字と見なす大きさの下限値
@@ -110,7 +112,7 @@ def recheck_adjs(adjs, char_size=20):
 
     return ret_list
 
-def recheck_adjs_new(adjs, char_size=20):
+def recheck_adjs(adjs, char_size=20):
     """
     :param adjs: list of boxes
     :param char_size: integer: 文字と見なす大きさの下限値
@@ -298,3 +300,25 @@ def sweep_boxes_in_page_margin(obj, boxes, mgn=None):
 
     return [x for x in boxes
                 if not in_margin(x, left_mgn, right_mgn, upper_mgn, lower_mgn)]
+
+
+def include(box1, box2):
+    """
+       box1 が box2 を包含するならtrueを返す。
+
+    :param box1:
+    :param box2:
+    :return: Boolean :
+    """
+
+    ax1, ay1, w1, h1 = box1
+    ax2 = ax1 + w1
+    ay2 = ay1 + h1
+    bx1, by1, w2, h2 = box2
+    bx2 = bx1 + w2
+    by2 = by1 + h2
+
+    if (ax1 <= bx1) and (bx2 <= ax2) and (ay1 <= by1) and (by2 <= ay2):
+        return True
+    else:
+        return False

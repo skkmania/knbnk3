@@ -43,7 +43,7 @@ __all__ = ["KnParam", "KnParamException", "KnParamParamsException", "HOME_DIR", 
 #   以下の4つは排他。どれかひとつを指定。配列内の意味はopencvのdocを参照のこと
 #     2値化のやりかたを決める重要な設定項目。
 #     "canny"        : [threshold1, threshold2, apertureSize],
-#     "threshold"    : [thresh, maxval, type],
+#     "threshold"    : [maxval, under, type],
 #     "adaptive"     : [maxval, method, type, blockSize, C]
 #     "harris"       : [blockSize, ksize, k]
 
