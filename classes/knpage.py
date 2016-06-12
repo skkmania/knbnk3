@@ -2,6 +2,7 @@
 import sys
 import numpy as np
 from scipy import ndimage, stats
+import statistics as stat
 import cv2
 import json
 import os.path
@@ -733,6 +734,72 @@ class KnPage:
                 if char[1] - char[0] >= minimum:
                     char_img = self.line_imgs[i][char[0]:char[1]+1, :]
                     self.chars[i].append(kc.KnChar(char_img, i, j))
+
+    def check_chars(self):
+        """
+        get_charsで得たself.charsの検査と修正
+        :return:
+        """
+        for i, line in enumerate(self.chars):
+            height_median = self.get_height_median(line)
+            for j, char in enumerate(line):
+                if char.img.shape[0] > 1.5*height_median:
+                    new_chars = self.modify_dup_chars(char, height_median, i, j)
+                    if len(new_chars) > 1:
+                        self.replace_chars(new_chars, i, j)
+
+    def replace_chars(self, list, line, count):
+        """
+        modify_dup_charsの結果のリスト（文字オブジェクト）を受け取り
+        新たに生成された複数の文字オブジェクトで、self.charsで古い文字オブジェクトを置き換える
+        必要なら後に続く既存の文字オブジェクトの'背番号'も書き換える
+        :param list:
+        :param line:
+        :param count:
+        :return:
+        """
+        delta = len(list) - 1
+        self.chars[line].pop(count)
+        self.chars[line][count:len(list)] = list
+        for char in self.chars[line][count+1:]:
+            char.j = char.j + delta
+
+
+    def modify_dup_chars(self, char, height, line, count, min=1000):
+        """
+        一つの画像に複数文字がはいっていると思われる文字オブジェクトを
+        受け取り、一字ずつの文字オブジェクトを生成しそのリストを返す
+        生成に失敗した場合は受け取ったオブジェクトをリストにくるんで返す
+        :param char: 文字オブジェクト（KnChar)
+        :param height: Integer : 参考にする文字高
+        :param line : Integer : 行番号
+        :param count : Integer : 行の何文字目
+        :param min : Integer : histgramで、文字の境界とする基準数値
+        :return: list : 文字オブジェクト（KnChar)のリスト
+        """
+        # 画像のヒストグラムによる分割を試みる
+        hist = np.sum(char.img, axis=1)
+        range_list = ku.get_range_list(hist, min)
+        # 画像に含まれる暫定文字数が1なら失敗
+        tmp_char_num = len(range_list)
+        if tmp_char_num == 1:
+            return [char]
+
+        ret_list = []
+        for i, range in enumerate(range_list):
+            tmp_height = range[1] - range[0]
+            if 0.8*height < tmp_height < 1.2*height:
+                img = char.img[range[0]:range[1]+1]
+                ret_list.append(kc.KnChar(img, line, count + i))
+        return ret_list
+
+    def get_height_median(self, line):
+        """
+        文字のリストを受け取り、その画像の高さの最頻値を返す
+        :param line: 　文字(KnChar object) のリスト
+        :return: interger : 画像の高さの最頻値
+        """
+        return stat.median([chr.img.shape[0] for chr in line])
 
     def estimate_upper_mergin(self):
         """

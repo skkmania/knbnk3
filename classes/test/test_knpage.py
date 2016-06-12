@@ -138,10 +138,28 @@ class TestKnPage():
         for i, img in enumerate(kn.line_imgs):
             kn.write(DATA_DIR+"/1062973/k009/00/line_img_{0}.jpeg".format(i), img)
 
+    def test_get_height_median(self, kaisetu):
+        kn = KnPage(params=kaisetu)
+        kn.get_chars()
+        result = kn.get_height_median(kn.chars[1])
+        assert result == 35
+
     def test_get_chars(self, kaisetu):
         kn = KnPage(params=kaisetu)
         kn.get_chars()
         assert len(kn.chars) == 12
+        assert len(kn.chars[0]) == 5
+        assert len(kn.chars[1]) == 36
+        assert len(kn.chars[2]) == 35
+        assert len(kn.chars[3]) == 33
+        assert len(kn.chars[4]) == 34
+
+    def test_check_chars(self, kaisetu):
+        kn = KnPage(params=kaisetu)
+        kn.get_chars()
+        kn.check_chars()
+        assert len(kn.chars) == 12
+        assert len(kn.chars[4]) == 35
 
     def test_get_x_zero(self, kaiten):
         kn = KnPage(params=kaiten)
